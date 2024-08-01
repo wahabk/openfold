@@ -1,9 +1,10 @@
 Bootstrap: docker
-From: nvidia/cuda:11.3.1-cudnn8-devel-ubuntu20.04
+From: nvcr.io/nvidia/pytorch:23.04-py3
+# nvidia/cuda:11.3.1-cudnn8-devel-ubuntu20.04
 
 %files
     environment.yml             /opt/openfold/environment.yml
-    environment_aarch64.yml             /opt/openfold/environment_aarch64.yml
+    environment_aarch64_sing.yml             /opt/openfold/environment_aarch64_sing.yml
     openfold                    /opt/openfold/openfold
     scripts                     /opt/openfold/scripts
     run_pretrained_openfold.py  /opt/openfold/run_pretrained_openfold.py
@@ -13,13 +14,17 @@ From: nvidia/cuda:11.3.1-cudnn8-devel-ubuntu20.04
 %post
     export DEBIAN_FRONTEND=noninteractive
     # Add your installation steps
+    # apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/arm64/3bf863cc.pub 
+    apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/cross-linux-aarch64/3bf863cc.pub
+    # deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/cross-linux-aarch64/ /etc/apt/sources.list.d/cuda.list
+    echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/cross-linux-aarch64/ /" | tee /etc/apt/sources.list.d/cuda.list
     apt-get update && apt-get install -y \
         wget \
         libxml2 \
-        cuda-minimal-build-11-3 \
-        libcusparse-dev-11-3 \
-        libcublas-dev-11-3 \
-        libcusolver-dev-11-3 \
+        cuda-minimal-build \
+        libcusparse-dev \
+        libcublas-dev \
+        libcusolver-dev \
         git
     
     wget -P /tmp \
@@ -29,7 +34,9 @@ From: nvidia/cuda:11.3.1-cudnn8-devel-ubuntu20.04
     rm /tmp/Miniforge3-$(uname)-$(uname -m).sh
     export PATH=/opt/conda/bin:$PATH
     
-    conda env update -n base --file /opt/openfold/environment_aarch64_aarch64.yml
+    which conda
+    conda env create -f /opt/openfold/environment_aarch64_sing.yml
+    conda activate openfold-env
     export LD_LIBRARY_PATH=${CONDA_PREFIX}/lib:${LD_LIBRARY_PATH}
     
     # Download additional resource
@@ -40,6 +47,7 @@ From: nvidia/cuda:11.3.1-cudnn8-devel-ubuntu20.04
     cd /opt/openfold
     python3 setup.py install
 
-runscript
+%runscript
     conda deactivate >/dev/null 2>&1 || true
     exec /bin/bash -i
+
